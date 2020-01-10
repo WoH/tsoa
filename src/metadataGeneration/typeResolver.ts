@@ -343,28 +343,23 @@ export class TypeResolver {
     const enumDeclaration = enumNodes[0] as ts.EnumDeclaration;
 
     const typeChecker = this.current.typeChecker;
-    function getEnumValue(member: any) {
+    function getEnumValue(member: ts.EnumMember): string | number {
       const constantValue = typeChecker.getConstantValue(member);
-      if (constantValue != null) {
+      if (constantValue !== undefined) {
         return constantValue;
+      } else {
+        throw new GenerateMetadataError(`Could not determine value of enum member. You may be casting, which is not allowed.`, member);
       }
-      const initializer = member.initializer;
-      if (initializer) {
-        if (initializer.expression) {
-          return initializer.expression.text;
-        }
-        return initializer.text;
-      }
-      return;
     }
 
-    const enums = enumDeclaration.members.map((member: any, index) => {
+    const enums = enumDeclaration.members.map((member, index) => {
       const enumValue = getEnumValue(member);
       if (enumValue !== 0 && enumValue !== '' && !enumValue) {
         return String(index);
       }
       return enumValue;
     });
+
     return {
       dataType: 'refEnum',
       description: this.getNodeDescription(enumDeclaration),
