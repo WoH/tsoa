@@ -88,7 +88,7 @@ export class SpecGenerator2 extends SpecGenerator {
         definitions[referenceType.refName] = {
           description: referenceType.description,
           enum: referenceType.enums,
-          type: this.decideEnumType(referenceType.enums, referenceType.refName),
+          type: this.decideEnumType(referenceType.enums),
         };
       } else if (referenceType.dataType === 'refAlias') {
         const swaggerType = this.getSwaggerType(referenceType.type);

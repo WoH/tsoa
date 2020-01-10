@@ -125,6 +125,7 @@ export interface TestModel extends Model {
   };
 
   defaultGenericModel?: GenericModel;
+  literalUnion?: ComplicatedLiteralUnion;
 }
 
 export interface TypeAliasModel1 {
@@ -138,6 +139,8 @@ export interface TypeAliasModel2 {
 export class TypeAliasModel3 {
   public value3: string;
 }
+
+export type ComplicatedLiteralUnion = 'hello' | false | number;
 
 // tslint:disable-next-line:interface-over-type-literal
 export type TypeAlias4 = { value4: string };

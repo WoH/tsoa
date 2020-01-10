@@ -237,20 +237,15 @@ export class ValidationService {
       };
       return;
     }
-    const enumValue = members.find(member => member === value);
+    const enumValue = members.find(member => member === value || String(member) === value);
     if (enumValue === undefined) {
-      const membersCommaSeparated = members
-        .map(member => {
-          return typeof member === 'string' ? `'${member}'` : member;
-        })
-        .join(`, `);
       fieldErrors[parent + name] = {
-        message: `should be one of the following; [${membersCommaSeparated}]`,
+        message: `should be one of the following; ${JSON.stringify(members)}`,
         value,
       };
       return;
     }
-    return value;
+    return enumValue;
   }
 
   public validateDate(name: string, value: any, fieldErrors: FieldErrors, validators?: DateValidator, parent = '') {

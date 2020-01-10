@@ -420,7 +420,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
             expect(propertySchema).to.not.haveOwnProperty('additionalProperties', `for property ${propertyName}`);
 
             const schema = getComponentSchema('EnumNumberValue', currentSpec);
-            expect(schema.type).to.eq('integer');
+            expect(schema.type).to.eq('number');
             expect(schema.enum).to.eql([0, 2, 5]);
           },
           enumStringNumberValue: (propertyName, propertySchema) => {
@@ -507,7 +507,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
           },
           unionPrimetiveType: (propertyName, propertySchema) => {
             expect(propertySchema).to.deep.eq({
-              oneOf: [{ type: 'string', enum: ['String'] }, { type: 'string', enum: ['1'] }, { type: 'string', enum: ['20'] }, { type: 'string', enum: ['true'] }, { type: 'string', enum: ['false'] }],
+              oneOf: [{ type: 'string', enum: ['String'] }, { type: 'number', enum: [1] }, { type: 'number', enum: [20] }, { type: 'boolean', enum: [true] }, { type: 'boolean', enum: [false] }],
               nullable: true,
               default: undefined,
               description: undefined,
@@ -515,13 +515,13 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
             });
           },
           singleFloatLiteralType: (propertyName, propertySchema) => {
-            expect(propertySchema.type).to.eq('string', `for property ${propertyName}.type`);
+            expect(propertySchema.type).to.eq('number', `for property ${propertyName}.type`);
             expect(propertySchema['nullable']).to.eq(true, `for property ${propertyName}[x-nullable]`);
             if (!propertySchema.enum) {
               throw new Error(`There was no 'enum' property on ${propertyName}.`);
             }
             expect(propertySchema.enum).to.have.length(1, `for property ${propertyName}.enum`);
-            expect(propertySchema.enum).to.include('3.1415', `for property ${propertyName}.enum`);
+            expect(propertySchema.enum).to.include(3.1415, `for property ${propertyName}.enum`);
           },
           dateValue: (propertyName, propertySchema) => {
             expect(propertySchema.type).to.eq('string', `for property ${propertyName}.type`);
@@ -946,6 +946,22 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
               `for schema linked by property ${propertyName}`,
             );
           },
+          literalUnion: (propertyName, propertySchema) => {
+            expect(propertySchema).to.deep.equal({
+              $ref: '#/components/schemas/ComplicatedLiteralUnion',
+              description: undefined,
+              nullable: true,
+              format: undefined,
+            });
+
+            const referencedSchema = getComponentSchema('ComplicatedLiteralUnion', currentSpec);
+            expect(referencedSchema).to.deep.equal({
+              oneOf: [{ type: 'string', enum: ['hello'] }, { type: 'boolean', enum: [false] }, { type: 'number', format: 'double' }],
+              description: undefined,
+              default: undefined,
+              example: undefined,
+            });
+          },
         };
 
         const testModel = currentSpec.spec.components.schemas[interfaceModelName];
@@ -1000,15 +1016,13 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
       };
 
       // Act
-      let errToTest: Error | null = null;
-      try {
-        new SpecGenerator3(metadataForEnums, swaggerConfig).GetSpec();
-      } catch (err) {
-        errToTest = err;
-      }
+      const spyOfConsoleWarn = sinon.spy(console, 'warn');
+
+      new SpecGenerator3(metadataForEnums, swaggerConfig).GetSpec();
 
       // Assert
-      expect(errToTest!.message).to.eq(`Enums can only have string or number values, but enum ${schemaName} had number,string,object`);
+      assert(spyOfConsoleWarn.calledWithExactly('Swagger/OpenAPI does not support enums with both strings and numbers but found that for enum [1,"two",3,"four",{}]'));
+      sinon.restore();
     });
 
     it('should warn if an enum is mixed with numbers and strings', () => {
@@ -1020,7 +1034,8 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
       new SpecGenerator3(mixedEnumMetadata, defaultOptions).GetSpec();
 
       // Assert
-      assert(spyOfConsoleWarn.calledWithExactly('Swagger/OpenAPI does not support enums with both strings and numbers but found that for enum MixedStringAndNumberEnum'));
+      assert(spyOfConsoleWarn.calledWithExactly('Swagger/OpenAPI does not support enums with both strings and numbers but found that for enum [1,"two",3,"four"]'));
+      sinon.restore();
     });
   });
 });

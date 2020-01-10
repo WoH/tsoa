@@ -251,7 +251,7 @@ describe('Definition generation', () => {
             expect(propertySchema).to.not.haveOwnProperty('additionalProperties', `for property ${propertyName}`);
 
             const validatedDefinition = getValidatedDefinition('EnumNumberValue', currentSpec);
-            expect(validatedDefinition.type).to.eq('integer');
+            expect(validatedDefinition.type).to.eq('number');
             const expectedEnumValues = [0, 2, 5];
             expect(validatedDefinition.enum).to.eql(expectedEnumValues, `for property ${propertyName}[enum]`);
           },
@@ -351,19 +351,19 @@ describe('Definition generation', () => {
             }
             expect(propertySchema.enum).to.have.length(5, `for property ${propertyName}.enum`);
             expect(propertySchema.enum).to.include('String', `for property ${propertyName}.enum`);
-            expect(propertySchema.enum).to.include('1', `for property ${propertyName}.enum`);
-            expect(propertySchema.enum).to.include('20', `for property ${propertyName}.enum`);
-            expect(propertySchema.enum).to.include('true', `for property ${propertyName}.enum`);
-            expect(propertySchema.enum).to.include('false', `for property ${propertyName}.enum`);
+            expect(propertySchema.enum).to.include(1, `for property ${propertyName}.enum`);
+            expect(propertySchema.enum).to.include(20, `for property ${propertyName}.enum`);
+            expect(propertySchema.enum).to.include(true, `for property ${propertyName}.enum`);
+            expect(propertySchema.enum).to.include(false, `for property ${propertyName}.enum`);
           },
           singleFloatLiteralType: (propertyName, propertySchema) => {
-            expect(propertySchema.type).to.eq('string', `for property ${propertyName}.type`);
+            expect(propertySchema.type).to.eq('number', `for property ${propertyName}.type`);
             expect(propertySchema['x-nullable']).to.eq(true, `for property ${propertyName}[x-nullable]`);
             if (!propertySchema.enum) {
               throw new Error(`There was no 'enum' property on ${propertyName}.`);
             }
             expect(propertySchema.enum).to.have.length(1, `for property ${propertyName}.enum`);
-            expect(propertySchema.enum).to.include('3.1415', `for property ${propertyName}.enum`);
+            expect(propertySchema.enum).to.include(3.1415, `for property ${propertyName}.enum`);
           },
           dateValue: (propertyName, propertySchema) => {
             expect(propertySchema.type).to.eq('string', `for property ${propertyName}.type`);
@@ -808,6 +808,22 @@ describe('Definition generation', () => {
               },
               `for schema linked by property ${propertyName}`,
             );
+          },
+          literalUnion: (propertyName, propertySchema) => {
+            expect(propertySchema).to.deep.equal({
+              $ref: '#/definitions/ComplicatedLiteralUnion',
+              description: undefined,
+              format: undefined,
+              'x-nullable': true,
+            });
+
+            const referencedSchema = getValidatedDefinition('ComplicatedLiteralUnion', currentSpec);
+            expect(referencedSchema).to.deep.equal({
+              type: 'object',
+              description: undefined,
+              default: undefined,
+              example: undefined,
+            });
           },
         };
 
