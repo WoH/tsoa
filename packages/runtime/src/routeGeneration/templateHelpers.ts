@@ -1,4 +1,3 @@
-import * as moment from 'moment';
 import validator from 'validator';
 import { assertNever } from '../utils/assertNever';
 import { AdditionalProps } from './additionalProps';
@@ -254,9 +253,8 @@ export class ValidationService {
     return members[enumMatchIndex];
   }
 
-  public validateDate(name: string, value: any, fieldErrors: FieldErrors, validators?: DateValidator, parent = '') {
-    const momentDate = moment(String(value), moment.ISO_8601, true);
-    if (!momentDate.isValid()) {
+  public validateDate(name: string, value: unknown, fieldErrors: FieldErrors, validators?: DateValidator, parent = '') {
+    function dateError(): void {
       const message = validators && validators.isDate && validators.isDate.errorMsg ? validators.isDate.errorMsg : `invalid ISO 8601 date format, i.e. YYYY-MM-DD`;
       fieldErrors[parent + name] = {
         message,
@@ -265,10 +263,24 @@ export class ValidationService {
       return;
     }
 
+    const matches = /^(\d\d\d\d)-([0-1]\d)-([0-3]\d)([t\s]00:00:00(.000)?z?)?$/i.exec(String(value));
+
+    if (!matches || matches.length < 4) {
+      return dateError();
+    }
+
+    const [year, month, day] = [parseInt(matches[1]), parseInt(matches[2]), parseInt(matches[3])];
+
+    if (month < 1 || month > 12 || day < 1 || day > this.numberOfDaysInMonth(year, month)) {
+      return dateError();
+    }
+
     const dateValue = new Date(String(value));
+
     if (!validators) {
       return dateValue;
     }
+
     if (validators.minDate && validators.minDate.value) {
       const minDate = new Date(validators.minDate.value);
       if (minDate.getTime() > dateValue.getTime()) {
@@ -292,9 +304,19 @@ export class ValidationService {
     return dateValue;
   }
 
-  public validateDateTime(name: string, value: any, fieldErrors: FieldErrors, validators?: DateTimeValidator, parent = '') {
-    const momentDateTime = moment(String(value), moment.ISO_8601, true);
-    if (!momentDateTime.isValid()) {
+  private isLeapYear(year: number): boolean {
+    // https://tools.ietf.org/html/rfc3339#appendix-C
+    return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  }
+
+  private numberOfDaysInMonth(year: number, month: number): number {
+    const DAYS_IN_MONTH = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+    return month === 2 && this.isLeapYear(year) ? 29 : DAYS_IN_MONTH[month];
+  }
+
+  public validateDateTime(name: string, value: unknown, fieldErrors: FieldErrors, validators?: DateTimeValidator, parent = '') {
+    function dateTimeError(): void {
       const message = validators && validators.isDateTime && validators.isDateTime.errorMsg ? validators.isDateTime.errorMsg : `invalid ISO 8601 datetime format, i.e. YYYY-MM-DDTHH:mm:ss`;
       fieldErrors[parent + name] = {
         message,
@@ -303,10 +325,40 @@ export class ValidationService {
       return;
     }
 
+    const [date, time] = String(value).split(/t|\s/i);
+    if (!date || !time) {
+      return dateTimeError();
+    }
+
+    const dateMatches = /^(\d\d\d\d)-([0-1]\d)-([0-3]\d)$/.exec(date);
+
+    if (!dateMatches || dateMatches.length !== 4) {
+      return dateTimeError();
+    }
+
+    const [year, month, day] = [parseInt(dateMatches[1]), parseInt(dateMatches[2]), parseInt(dateMatches[3])];
+
+    if (month < 1 || month > 12 || day < 1 || day > this.numberOfDaysInMonth(year, month)) {
+      return dateTimeError();
+    }
+
+    const timeMatches = /^(\d\d):(\d\d):(\d\d)(\.\d+)?(z|[+-]\d\d(?::?\d\d)?)?$/i.exec(time);
+
+    if (!timeMatches) {
+      return dateTimeError();
+    }
+
+    const [, hour, minute, second] = timeMatches;
+
+    if ((parseInt(hour) === 23 && parseInt(minute) === 59 && parseInt(second) > 60) || parseInt(hour) > 23 || parseInt(minute) > 59 || parseInt(second) > 59) {
+      return dateTimeError();
+    }
+
     const datetimeValue = new Date(String(value));
     if (!validators) {
       return datetimeValue;
     }
+
     if (validators.minDate && validators.minDate.value) {
       const minDate = new Date(validators.minDate.value);
       if (minDate.getTime() > datetimeValue.getTime()) {
